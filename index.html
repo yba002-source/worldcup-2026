@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Cup 2026 — Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e14;
+    --panel:#121823;
+    --panel2:#0f141d;
+    --line:#222d3d;
+    --txt:#e7edf5;
+    --muted:#8a98ad;
+    --accent:#19c37d;       /* pitch green */
+    --accent2:#3ea6ff;
+    --arab:#ffd400;         /* Arab team highlight */
+    --arab-bg:rgba(255,212,0,.14);
+    --arab-line:rgba(255,212,0,.55);
+    --shadow:0 10px 40px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--txt);font-family:"Archivo",system-ui,sans-serif}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(62,166,255,.10), transparent 60%),
+      radial-gradient(800px 500px at -5% 10%, rgba(25,195,125,.10), transparent 55%),
+      var(--bg);
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:22px 18px 80px}
+
+  header.top{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;padding:8px 0 18px;border-bottom:1px solid var(--line);
+  }
+  .brand h1{
+    font-family:"Anton",sans-serif;font-weight:400;letter-spacing:.5px;
+    font-size:clamp(30px,6vw,56px);line-height:.92;text-transform:uppercase;
+  }
+  .brand h1 .yr{color:var(--accent)}
+  .brand p{color:var(--muted);font-size:13px;margin-top:6px;letter-spacing:.3px}
+  .nav{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{
+    cursor:pointer;border:1px solid var(--line);background:var(--panel);
+    color:var(--txt);padding:11px 18px;border-radius:999px;font-weight:700;
+    font-size:14px;letter-spacing:.3px;transition:.15s;display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .btn.active{background:var(--accent);color:#05140d;border-color:var(--accent)}
+  .btn.ghost{background:transparent}
+
+  .stagebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 6px}
+  .stagebar .arrow{
+    width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
+    cursor:pointer;border:1px solid var(--line);background:var(--panel);font-size:18px;color:var(--txt);
+  }
+  .stagebar .arrow:hover{border-color:var(--accent2)}
+  .stagebar .arrow[disabled]{opacity:.3;cursor:not-allowed}
+  .stage-title{
+    font-family:"Anton",sans-serif;font-size:clamp(20px,3.6vw,30px);text-transform:uppercase;
+    letter-spacing:.5px;flex:1;min-width:160px;
+  }
+  .pill-live{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--accent);
+    border:1px solid var(--accent);padding:4px 10px;border-radius:999px;text-transform:uppercase}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:12.5px;margin:4px 0 18px}
+  .legend .sw{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+
+  .daygroup{margin:26px 0 8px}
+  .daygroup h3{
+    font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);
+    font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:10px;
+  }
+  .daygroup h3::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  .matches{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  .match{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;
+  }
+  .match .meta{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+  .match .grp{font-weight:800;letter-spacing:.5px;color:var(--accent2)}
+  .teams{display:flex;flex-direction:column;gap:8px}
+  .row{
+    display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:11px;
+    background:rgba(255,255,255,.02);border:1px solid transparent;
+  }
+  .row.arab{background:var(--arab-bg);border-color:var(--arab-line)}
+  .row .flag{font-size:22px;line-height:1;width:26px;text-align:center;flex:none}
+  .row .nm{font-weight:700;font-size:15.5px;flex:1}
+  .row.arab .nm{color:var(--arab)}
+  .row .tbd{color:var(--muted);font-style:italic;font-weight:600}
+  .row .sc{font-family:"Anton",sans-serif;font-size:20px;min-width:26px;text-align:center}
+  .row .win{color:var(--accent)}
+  .match .foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+  .match .city{display:inline-flex;align-items:center;gap:6px}
+  .uae-time{font-weight:800;color:var(--txt);font-size:13.5px}
+  .uae-time .d{color:var(--muted);font-weight:600}
+  .status{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
+  .status.ft{color:var(--muted)}
+  .status.up{color:var(--accent2)}
+
+  /* rankings */
+  .groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-top:22px}
+  .gcard{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+    border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+  .gcard h4{font-family:"Anton",sans-serif;font-size:20px;letter-spacing:.5px;text-transform:uppercase;
+    margin-bottom:10px;color:var(--accent)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:center;padding:7px 4px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;font-weight:800}
+  td.team{text-align:left;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+  tr.arab td.team{color:var(--arab)}
+  tr.qual{background:rgba(25,195,125,.07)}
+  td .miniflag{margin-right:6px}
+  td.pts{font-weight:800;color:var(--txt)}
+
+  .note{color:var(--muted);font-size:12px;margin-top:18px;line-height:1.6}
+  .loader,.err{text-align:center;padding:60px 20px;color:var(--muted)}
+  .err b{color:#ff6b6b}
+  .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 16px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .hidden{display:none!important}
+  .refresh-meta{font-size:11.5px;color:var(--muted);margin-left:auto}
+  @media(max-width:560px){.matches,.groups{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>FIFA World Cup <span class="yr">2026</span></h1>
+      <p>USA · Canada · Mexico — all times shown in <b>UAE (GST, UTC+4)</b></p>
+    </div>
+    <div class="nav">
+      <button class="btn active" id="navMatches">⚽ Matches</button>
+      <button class="btn ghost" id="navRanks">📊 Rankings</button>
+      <button class="btn ghost" id="navRefresh" title="Reload live data">↻</button>
+    </div>
+  </header>
+
+  <!-- MATCHES VIEW -->
+  <section id="viewMatches">
+    <div class="stagebar">
+      <div class="arrow" id="prevStage">‹</div>
+      <div class="stage-title" id="stageTitle">Loading…</div>
+      <span class="pill-live" id="livePill" style="display:none">Current round</span>
+      <div class="arrow" id="nextStage">›</div>
+    </div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--arab)"></span>Arab nations</span>
+      <span><span class="sw" style="background:var(--accent2)"></span>Upcoming</span>
+      <span><span class="sw" style="background:var(--muted)"></span>Full time</span>
+      <span class="refresh-meta" id="refreshMeta"></span>
+    </div>
+    <div id="matchHost">
+      <div class="loader"><div class="spin"></div>Fetching live World Cup data…</div>
+    </div>
+  </section>
+
+  <!-- RANKINGS VIEW -->
+  <section id="viewRanks" class="hidden">
+    <div class="stagebar"><div class="stage-title">Group Standings</div></div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--arab)"></span>Arab nations</span>
+      <span><span class="sw" style="background:rgba(25,195,125,.5)"></span>Top 2 (qualify)</span>
+      <span>Best 8 third-placed teams also advance to the Round of 32.</span>
+    </div>
+    <div class="groups" id="groupHost"></div>
+  </section>
+
+  <p class="note">
+    Data source: <b>openfootball/worldcup.json</b> (public domain, no API key). Fixtures &amp; venues are
+    official; live scores may lag slightly behind real time. The Matches page shows the current round and
+    advances automatically — group stage first, then Round of 32 → 16 → Quarter-finals → Semi-finals → Final.
+  </p>
+  <footer style="margin-top:34px;padding-top:18px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:13px;letter-spacing:.3px">
+    Copyright &copy; Yahya EL Alaoui, in collaboration with Claude AI
+  </footer>
+</div>
+
+<script>
+const DATA_URL = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json";
+
+/* ---------- Arab nations + flags ---------- */
+const ISO = {
+  "Algeria":"DZ","Bahrain":"BH","Comoros":"KM","Djibouti":"DJ","Egypt":"EG","Iraq":"IQ","Jordan":"JO",
+  "Kuwait":"KW","Lebanon":"LB","Libya":"LY","Mauritania":"MR","Morocco":"MA","Oman":"OM","Palestine":"PS",
+  "Qatar":"QA","Saudi Arabia":"SA","Somalia":"SO","Sudan":"SD","Syria":"SY","Tunisia":"TN",
+  "United Arab Emirates":"AE","UAE":"AE","Yemen":"YE",
+  "United States":"US","USA":"US","Canada":"CA","Mexico":"MX","Argentina":"AR","Brazil":"BR","France":"FR",
+  "Spain":"ES","Germany":"DE","Portugal":"PT","Netherlands":"NL","Belgium":"BE","Croatia":"HR","Italy":"IT",
+  "Uruguay":"UY","Colombia":"CO","Japan":"JP","South Korea":"KR","Korea Republic":"KR","Australia":"AU",
+  "Senegal":"SN","Ghana":"GH","Nigeria":"NG","Cameroon":"CM","Ivory Coast":"CI","Côte d'Ivoire":"CI",
+  "Ecuador":"EC","Switzerland":"CH","Denmark":"DK","Poland":"PL","Serbia":"RS","Czech Republic":"CZ",
+  "Czechia":"CZ","Austria":"AT","Norway":"NO","Sweden":"SE","Turkey":"TR","Türkiye":"TR","Ukraine":"UA",
+  "Greece":"GR","Iran":"IR","IR Iran":"IR","South Africa":"ZA","Costa Rica":"CR","Panama":"PA","Jamaica":"JM",
+  "Honduras":"HN","New Zealand":"NZ","Uzbekistan":"UZ","Paraguay":"PY","Peru":"PE","Chile":"CL",
+  "Venezuela":"VE","Bolivia":"BO","Russia":"RU","Cape Verde":"CV","Cabo Verde":"CV","Curacao":"CW",
+  "Curaçao":"CW","Haiti":"HT"
+};
+const ARAB = new Set(["DZ","BH","KM","DJ","EG","IQ","JO","KW","LB","LY","MR","MA","OM","PS","QA","SA","SO","SD","SY","TN","AE","YE"]);
+const SPECIAL = { "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Wales":"🏴󠁧󠁢󠁷󠁬󠁳󠁿" };
+
+function iso(name){ return ISO[(name||"").trim()] || null; }
+function flag(name){
+  if(SPECIAL[name]) return SPECIAL[name];
+  const c = iso(name);
+  if(!c) return "🏳️";
+  return String.fromCodePoint(...[...c].map(ch=>0x1F1E6 + ch.charCodeAt(0)-65));
+}
+function isArab(name){ const c=iso(name); return c && ARAB.has(c); }
+function isRealTeam(name){
+  if(!name) return false;
+  if(SPECIAL[name]) return true;
+  if(iso(name)) return true;
+  // placeholders look like "W101","1A","2B","3rd Group...","Winner ..."
+  return /^[A-Za-z .'’\-]{4,}$/.test(name) && !/^winner|^runner|^loser|group|place|^[0-9]/i.test(name);
+}
+
+/* ---------- time: venue local -> UAE ---------- */
+function parseToUAE(dateStr, timeStr){
+  if(!dateStr || !timeStr) return null;
+  const m = timeStr.match(/(\d{1,2}):(\d{2})\s*(?:UTC\s*([+-]\d{1,2}))?/i);
+  if(!m) return null;
+  const hh = +m[1], mm = +m[2];
+  const off = m[3] !== undefined ? +m[3] : null; // venue UTC offset
+  const [y,mo,d] = dateStr.split("-").map(Number);
+  let utcMs;
+  if(off === null){
+    // no offset in source; treat the time as already venue-local but unknown tz -> assume value is UTC
+    utcMs = Date.UTC(y, mo-1, d, hh, mm);
+  } else {
+    utcMs = Date.UTC(y, mo-1, d, hh - off, mm); // UTC = local - offset
+  }
+  return new Date(utcMs);
+}
+const fmtTime = new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dubai",hour:"2-digit",minute:"2-digit",hour12:false});
+const fmtDate = new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dubai",weekday:"short",day:"numeric",month:"short"});
+const fmtDayKey = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Dubai",year:"numeric",month:"2-digit",day:"2-digit"});
+const fmtDayLong = new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dubai",weekday:"long",day:"numeric",month:"long"});
+
+/* ---------- stage classification ---------- */
+function stageOf(match){
+  const r = (match.round||"").toLowerCase();
+  if(match.group || r.startsWith("matchday") || r.startsWith("group")) return {key:"GROUP", order:0, label:"Group Stage"};
+  if(r.includes("round of 32")) return {key:"R32", order:1, label:"Round of 32"};
+  if(r.includes("round of 16")) return {key:"R16", order:2, label:"Round of 16"};
+  if(r.includes("quarter"))     return {key:"QF",  order:3, label:"Quarter-finals"};
+  if(r.includes("semi"))        return {key:"SF",  order:4, label:"Semi-finals"};
+  if(r.includes("third")||r.includes("3rd")) return {key:"3RD", order:5, label:"Third-place play-off"};
+  if(r.includes("final"))       return {key:"FIN", order:6, label:"Final"};
+  return {key:"GROUP", order:0, label:"Group Stage"};
+}
+function hasScore(m){ return m.score && Array.isArray(m.score.ft) && m.score.ft.length===2; }
+
+/* ---------- state ---------- */
+let MATCHES = [];
+let ROUNDS = [];      // ordered list of round objects {id,label,order,matches,minDate}
+let activeIdx = 0;
+
+function buildRounds(){
+  // group group-stage by its round label (Matchday N); knockouts each as one round
+  const map = new Map();
+  MATCHES.forEach(m=>{
+    const s = stageOf(m);
+    let id, label, order;
+    if(s.key==="GROUP"){
+      id = (m.round||"Group Stage");      // Matchday N
+      label = id;
+      order = 0 + matchdayNum(id)*0.01;   // keep matchdays ordered within group stage
+    } else {
+      id = s.key; label = s.label; order = s.order;
+    }
+    if(!map.has(id)) map.set(id,{id,label,order,matches:[]});
+    map.get(id).matches.push(m);
+  });
+  ROUNDS = [...map.values()].map(r=>{
+    r.minDate = Math.min(...r.matches.map(m=> (parseToUAE(m.date,m.time)?.getTime()) ?? Date.parse(m.date) ?? Infinity));
+    return r;
+  }).sort((a,b)=> a.order-b.order || a.minDate-b.minDate);
+
+  ROUNDS.forEach(r=> r.matches.sort((a,b)=>{
+    const ta=parseToUAE(a.date,a.time)?.getTime() ?? Date.parse(a.date);
+    const tb=parseToUAE(b.date,b.time)?.getTime() ?? Date.parse(b.date);
+    return ta-tb;
+  }));
+}
+function matchdayNum(s){ const m=(s||"").match(/(\d+)/); return m?+m[1]:0; }
+
+function pickActive(){
+  // first round (in order) that still has an unplayed match
+  let idx = ROUNDS.findIndex(r=> r.matches.some(m=> !hasScore(m)));
+  if(idx === -1) idx = ROUNDS.length-1; // tournament over -> show final
+  return idx;
+}
+
+/* ---------- render matches ---------- */
+function teamRow(name, score, otherScore, played){
+  const arab = isArab(name);
+  const real = isRealTeam(name);
+  const win = played && score!=null && otherScore!=null && score>otherScore;
+  return `<div class="row ${arab?'arab':''}">
+    <span class="flag">${real?flag(name):'⚽'}</span>
+    <span class="nm ${real?'':'tbd'}">${real?escapeHtml(name):escapeHtml(name||'TBD')}</span>
+    <span class="sc ${win?'win':''}">${played&&score!=null?score:''}</span>
+  </div>`;
+}
+function renderMatches(){
+  const host = document.getElementById("matchHost");
+  if(!ROUNDS.length){ host.innerHTML = `<div class="err">No matches found in the source.</div>`; return; }
+  const round = ROUNDS[activeIdx];
+
+  document.getElementById("stageTitle").textContent = round.label;
+  document.getElementById("livePill").style.display = (activeIdx===pickActive()) ? "" : "none";
+  document.getElementById("prevStage").toggleAttribute("disabled", activeIdx===0);
+  document.getElementById("nextStage").toggleAttribute("disabled", activeIdx===ROUNDS.length-1);
+
+  // group matches by UAE calendar day
+  const byDay = new Map();
+  round.matches.forEach(m=>{
+    const dt = parseToUAE(m.date,m.time);
+    const key = dt ? fmtDayKey.format(dt) : m.date;
+    if(!byDay.has(key)) byDay.set(key,{dt,items:[]});
+    byDay.get(key).items.push(m);
+  });
+
+  let html = "";
+  [...byDay.entries()].sort((a,b)=> (a[1].dt?.getTime()||0)-(b[1].dt?.getTime()||0)).forEach(([k,grp])=>{
+    const label = grp.dt ? fmtDayLong.format(grp.dt) : k;
+    html += `<div class="daygroup"><h3>${label}</h3><div class="matches">`;
+    grp.items.forEach(m=>{
+      const dt = parseToUAE(m.date,m.time);
+      const played = hasScore(m);
+      const s1 = played ? m.score.ft[0] : null;
+      const s2 = played ? m.score.ft[1] : null;
+      const grpLabel = m.group ? m.group : round.label;
+      html += `<div class="match">
+        <div class="meta"><span class="grp">${escapeHtml(grpLabel)}</span>
+          <span class="status ${played?'ft':'up'}">${played?'Full&nbsp;time':'Upcoming'}</span></div>
+        <div class="teams">
+          ${teamRow(m.team1, s1, s2, played)}
+          ${teamRow(m.team2, s2, s1, played)}
+        </div>
+        <div class="foot">
+          <span class="city">📍 ${escapeHtml(cityOf(m.ground))}</span>
+          <span class="uae-time">${dt?fmtTime.format(dt):'--:--'} <span class="d">· ${dt?fmtDate.format(dt):''}</span></span>
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  host.innerHTML = html;
+}
+function cityOf(g){
+  if(!g) return "TBD";
+  // openfootball uses "City" or "Stadium, City" — show the most human part
+  const parts = g.split(",").map(s=>s.trim());
+  return parts.length>1 ? parts[parts.length-1] : parts[0];
+}
+
+/* ---------- render rankings ---------- */
+function renderRanks(){
+  const host = document.getElementById("groupHost");
+  const groups = new Map(); // "Group A" -> {teams:Set, rows:Map}
+  MATCHES.forEach(m=>{
+    if(!m.group) return;
+    if(!groups.has(m.group)) groups.set(m.group,{teams:new Set(),stats:new Map()});
+    const g = groups.get(m.group);
+    [m.team1,m.team2].forEach(t=>{ if(isRealTeam(t)){ g.teams.add(t); if(!g.stats.has(t)) g.stats.set(t,blank()); }});
+    if(hasScore(m) && isRealTeam(m.team1) && isRealTeam(m.team2)){
+      const [a,b]=m.score.ft; tally(g.stats.get(m.team1),a,b); tally(g.stats.get(m.team2),b,a);
+    }
+  });
+  if(!groups.size){ host.innerHTML = `<div class="err" style="grid-column:1/-1">Group data not available yet.</div>`; return; }
+
+  const order = [...groups.keys()].sort();
+  host.innerHTML = order.map(gname=>{
+    const g = groups.get(gname);
+    const rows = [...g.teams].map(t=>({t,...g.stats.get(t)}))
+      .sort((x,y)=> y.pts-x.pts || (y.gf-y.ga)-(x.gf-x.ga) || y.gf-x.gf || x.t.localeCompare(y.t));
+    // pad to 4 slots
+    while(rows.length<4) rows.push(null);
+    const body = rows.map((r,i)=>{
+      if(!r) return `<tr><td class="team" style="color:var(--muted)">—</td><td>·</td><td>·</td><td>·</td><td>·</td><td>·</td><td class="pts">·</td></tr>`;
+      const arab = isArab(r.t);
+      const qual = i<2;
+      return `<tr class="${arab?'arab':''} ${qual?'qual':''}">
+        <td class="team"><span class="miniflag">${flag(r.t)}</span>${escapeHtml(r.t)}</td>
+        <td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td>
+        <td>${r.gf-r.ga>0?'+':''}${r.gf-r.ga}</td><td class="pts">${r.pts}</td>
+      </tr>`;
+    }).join("");
+    return `<div class="gcard"><h4>${escapeHtml(gname)}</h4>
+      <table><thead><tr><th style="text-align:left">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead>
+      <tbody>${body}</tbody></table></div>`;
+  }).join("");
+}
+function blank(){ return {p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0}; }
+function tally(s,gf,ga){ s.p++; s.gf+=gf; s.ga+=ga; if(gf>ga){s.w++;s.pts+=3;} else if(gf===ga){s.d++;s.pts++;} else s.l++; }
+
+/* ---------- utils ---------- */
+function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- nav ---------- */
+document.getElementById("navMatches").onclick = ()=>switchView("matches");
+document.getElementById("navRanks").onclick   = ()=>switchView("ranks");
+document.getElementById("navRefresh").onclick = ()=>load(true);
+document.getElementById("prevStage").onclick  = ()=>{ if(activeIdx>0){activeIdx--;renderMatches();} };
+document.getElementById("nextStage").onclick  = ()=>{ if(activeIdx<ROUNDS.length-1){activeIdx++;renderMatches();} };
+function switchView(v){
+  const m=v==="matches";
+  document.getElementById("viewMatches").classList.toggle("hidden",!m);
+  document.getElementById("viewRanks").classList.toggle("hidden",m);
+  document.getElementById("navMatches").classList.toggle("active",m);
+  document.getElementById("navMatches").classList.toggle("ghost",!m);
+  document.getElementById("navRanks").classList.toggle("active",!m);
+  document.getElementById("navRanks").classList.toggle("ghost",m);
+}
+
+/* ---------- load ---------- */
+async function load(forceActive){
+  try{
+    const res = await fetch(DATA_URL, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data = await res.json();
+    MATCHES = data.matches || [];
+    buildRounds();
+    if(forceActive===true || activeIdx==null || activeIdx>ROUNDS.length-1 || firstLoad){
+      activeIdx = pickActive();
+    }
+    firstLoad = false;
+    renderMatches();
+    renderRanks();
+    document.getElementById("refreshMeta").textContent =
+      "Updated " + new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dubai",hour:"2-digit",minute:"2-digit"}).format(new Date()) + " GST";
+  }catch(e){
+    document.getElementById("matchHost").innerHTML =
+      `<div class="err"><b>Couldn't load live data.</b><br>${escapeHtml(e.message)}<br><br>
+      If you opened this file directly, your browser may block the request — try a quick local server
+      (<code>python3 -m http.server</code>) or host the file online. The data feed is:<br>
+      <code style="font-size:11px">${DATA_URL}</code></div>`;
+  }
+}
+let firstLoad = true;
+load(true);
+setInterval(load, 5*60*1000); // refresh every 5 min
+</script>
+</body>
+</html>
