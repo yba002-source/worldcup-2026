@@ -271,7 +271,7 @@ function statusOf(m, dt){
   if(!dt)        return {cls:'up', html:'Upcoming', live:false};
   const now = Date.now(), ko = dt.getTime();
   if(now < ko)                       return {cls:'up',   html:'Upcoming', live:false};
-  if(now < ko + LIVE_MIN*60000)      return {cls:'live', html:'<span class="dot"></span>LIVE', live:true};
+  if(now < ko + LIVE_MIN*60000)      return {cls:'live', html:'<span class="dot"></span>Playing', live:true};
   return {cls:'ft', html:'Played', live:false};
 }
 
@@ -464,7 +464,7 @@ async function load(forceActive){
     renderRanks();
     document.getElementById("refreshMeta").textContent =
       "Updated " + new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dubai",hour:"2-digit",minute:"2-digit"}).format(new Date())
-      + " GST" + (anyLive ? " · live" : "");
+      + " GST" + (anyLive ? " · playing" : "");
   }catch(e){
     document.getElementById("matchHost").innerHTML =
       `<div class="err"><b>Couldn't load live data.</b><br>${escapeHtml(e.message)}<br><br>
