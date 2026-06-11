@@ -179,6 +179,7 @@
       <span><span class="sw" style="background:var(--arab)"></span>Arab nations</span>
       <span><span class="sw" style="background:rgba(25,195,125,.5)"></span>Top 2 (qualify)</span>
       <span>Best 8 third-placed teams also advance to the Round of 32.</span>
+      <span style="color:var(--accent2)">Live: in-progress matches are counted as they happen.</span>
     </div>
     <div class="groups" id="groupHost"></div>
   </section>
@@ -351,10 +352,10 @@ function matchDone(m){
   if(e) return e.state==="post" || e.completed;
   return hasScore(m);
 }
-/* unified final result for standings */
+/* unified result for standings — includes LIVE in-progress scores (provisional) */
 function resultFor(m){
   const e = espnFor(m);
-  if(e && (e.state==="post"||e.completed) && e.s1!=null && e.s2!=null) return {s1:e.s1, s2:e.s2};
+  if(e && (e.state==="in"||e.state==="post"||e.completed) && e.s1!=null && e.s2!=null) return {s1:e.s1, s2:e.s2};
   if(hasScore(m)) return {s1:m.score.ft[0], s2:m.score.ft[1]};
   return null;
 }
