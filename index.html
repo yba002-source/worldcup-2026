@@ -180,9 +180,10 @@
   </section>
 
   <p class="note">
-    Data source: <b>openfootball/worldcup.json</b> (public domain, no API key). Fixtures &amp; venues are
-    official; live scores may lag slightly behind real time. The Matches page shows the current round and
-    advances automatically — group stage first, then Round of 32 → 16 → Quarter-finals → Semi-finals → Final.
+    Live scores &amp; in-play status come from ESPN's public feed (no key); fixtures, groups and the bracket
+    come from <b>openfootball</b> (public domain). If ESPN is unreachable the page falls back to the schedule.
+    The Matches page shows the current round and advances automatically — group stage first, then
+    Round of 32 → 16 → Quarter-finals → Semi-finals → Final.
   </p>
   <footer style="margin-top:34px;padding-top:18px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:13px;letter-spacing:.3px">
     Copyright &copy; Yahya EL Alaoui, in collaboration with Claude AI
@@ -275,6 +276,68 @@ function statusOf(m, dt){
   return {cls:'ft', html:'Played', live:false};
 }
 
+/* ---------- ESPN live overlay (free, no key, CORS-open) ---------- */
+const ESPN_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260719&limit=1000";
+let LIVE = null; // { isoPairKey: {ts,homeISO,awayISO,hs,as,state,completed,detail} }
+
+function isoPairKey(a,b){ const x=iso(a), y=iso(b); if(!x||!y) return null; return [x,y].sort().join("-"); }
+
+async function fetchESPN(){
+  try{
+    const r = await fetch(ESPN_URL, {cache:"no-store"});
+    if(!r.ok) throw new Error("espn "+r.status);
+    const d = await r.json();
+    const idx = {};
+    (d.events||[]).forEach(ev=>{
+      const c = ev.competitions && ev.competitions[0]; if(!c) return;
+      const comps = c.competitors||[]; if(comps.length<2) return;
+      const home = comps.find(x=>x.homeAway==="home")||comps[0];
+      const away = comps.find(x=>x.homeAway==="away")||comps[1];
+      const hn = home.team && (home.team.displayName||home.team.shortDisplayName||home.team.name);
+      const an = away.team && (away.team.displayName||away.team.shortDisplayName||away.team.name);
+      const key = isoPairKey(hn,an); if(!key) return;
+      const st = (ev.status&&ev.status.type)||{};
+      idx[key] = {
+        ts: Date.parse(ev.date),
+        homeISO: iso(hn), awayISO: iso(an),
+        hs: home.score!=null && home.score!=="" ? +home.score : null,
+        as: away.score!=null && away.score!=="" ? +away.score : null,
+        state: st.state || "pre",            // pre | in | post
+        completed: !!st.completed,
+        detail: (st.shortDetail||st.detail||"").trim()
+      };
+    });
+    return idx;
+  }catch(e){ return null; }
+}
+
+/* ESPN data for one openfootball match, oriented to team1/team2 */
+function espnFor(m){
+  if(!LIVE) return null;
+  const key = isoPairKey(m.team1, m.team2); if(!key) return null;
+  const e = LIVE[key]; if(!e) return null;
+  const mt = parseToUAE(m.date, m.time);
+  if(mt && e.ts && Math.abs(mt.getTime()-e.ts) > 36*3600000) return null; // not the same fixture
+  const i1 = iso(m.team1);
+  const s1 = (e.homeISO===i1) ? e.hs : e.as;
+  const s2 = (e.homeISO===i1) ? e.as : e.hs;
+  return {s1, s2, state:e.state, completed:e.completed, detail:e.detail};
+}
+
+/* unified "is this match finished" (ESPN first, then openfootball) */
+function matchDone(m){
+  const e = espnFor(m);
+  if(e) return e.state==="post" || e.completed;
+  return hasScore(m);
+}
+/* unified final result for standings */
+function resultFor(m){
+  const e = espnFor(m);
+  if(e && (e.state==="post"||e.completed) && e.s1!=null && e.s2!=null) return {s1:e.s1, s2:e.s2};
+  if(hasScore(m)) return {s1:m.score.ft[0], s2:m.score.ft[1]};
+  return null;
+}
+
 /* ---------- state ---------- */
 let MATCHES = [];
 let ROUNDS = [];      // ordered list of round objects {id,label,order,matches,minDate}
@@ -311,7 +374,7 @@ function matchdayNum(s){ const m=(s||"").match(/(\d+)/); return m?+m[1]:0; }
 
 function pickActive(){
   // first round (in order) that still has an unplayed match
-  let idx = ROUNDS.findIndex(r=> r.matches.some(m=> !hasScore(m)));
+  let idx = ROUNDS.findIndex(r=> r.matches.some(m=> !matchDone(m)));
   if(idx === -1) idx = ROUNDS.length-1; // tournament over -> show final
   return idx;
 }
@@ -352,10 +415,25 @@ function renderMatches(){
     html += `<div class="daygroup"><h3>${label}</h3><div class="matches">`;
     grp.items.forEach(m=>{
       const dt = parseToUAE(m.date,m.time);
-      const played = hasScore(m);
-      const st = statusOf(m, dt);
-      const s1 = played ? m.score.ft[0] : null;
-      const s2 = played ? m.score.ft[1] : null;
+      const e = espnFor(m);
+      let played, s1, s2, st;
+      if(e){
+        if(e.state==="in"){
+          st = {cls:'live', html:('<span class="dot"></span>Playing'+(e.detail?' '+escapeHtml(e.detail):'')), live:true};
+          played = true; s1 = e.s1; s2 = e.s2;
+        } else if(e.state==="post" || e.completed){
+          st = {cls:'ft', html:'Full&nbsp;time', live:false};
+          played = true; s1 = e.s1; s2 = e.s2;
+        } else { // pre
+          st = {cls:'up', html:'Upcoming', live:false};
+          played = false; s1 = s2 = null;
+        }
+      } else {
+        played = hasScore(m);
+        st = statusOf(m, dt);
+        s1 = played ? m.score.ft[0] : null;
+        s2 = played ? m.score.ft[1] : null;
+      }
       const grpLabel = m.group ? m.group : round.label;
       html += `<div class="match ${st.live?'islive':''}">
         <div class="meta"><span class="grp">${escapeHtml(grpLabel)}</span>
@@ -390,8 +468,9 @@ function renderRanks(){
     if(!groups.has(m.group)) groups.set(m.group,{teams:new Set(),stats:new Map()});
     const g = groups.get(m.group);
     [m.team1,m.team2].forEach(t=>{ if(isRealTeam(t)){ g.teams.add(t); if(!g.stats.has(t)) g.stats.set(t,blank()); }});
-    if(hasScore(m) && isRealTeam(m.team1) && isRealTeam(m.team2)){
-      const [a,b]=m.score.ft; tally(g.stats.get(m.team1),a,b); tally(g.stats.get(m.team2),b,a);
+    const res = resultFor(m);
+    if(res && isRealTeam(m.team1) && isRealTeam(m.team2)){
+      tally(g.stats.get(m.team1),res.s1,res.s2); tally(g.stats.get(m.team2),res.s2,res.s1);
     }
   });
   if(!groups.size){ host.innerHTML = `<div class="err" style="grid-column:1/-1">Group data not available yet.</div>`; return; }
@@ -447,24 +526,30 @@ async function load(forceActive){
     if(!res.ok) throw new Error("HTTP "+res.status);
     const data = await res.json();
     MATCHES = data.matches || [];
+    LIVE = await fetchESPN();         // live overlay (null if ESPN unreachable)
     buildRounds();
     if(forceActive===true || activeIdx==null || activeIdx>ROUNDS.length-1 || firstLoad){
       activeIdx = pickActive();
     }
     firstLoad = false;
-    // detect if any match is currently in its live window -> poll faster
-    const now = Date.now();
-    anyLive = MATCHES.some(m=>{
-      if(hasScore(m)) return false;
-      const dt = parseToUAE(m.date,m.time); if(!dt) return false;
-      const ko = dt.getTime();
-      return now >= ko && now < ko + LIVE_MIN*60000;
-    });
+    // any match currently in play? prefer real ESPN state, else fall back to the clock
+    if(LIVE){
+      anyLive = Object.values(LIVE).some(e=> e.state==="in");
+    } else {
+      const now = Date.now();
+      anyLive = MATCHES.some(m=>{
+        if(hasScore(m)) return false;
+        const dt = parseToUAE(m.date,m.time); if(!dt) return false;
+        const ko = dt.getTime();
+        return now >= ko && now < ko + LIVE_MIN*60000;
+      });
+    }
     renderMatches();
     renderRanks();
+    const src = LIVE ? "ESPN live" : "schedule only";
     document.getElementById("refreshMeta").textContent =
       "Updated " + new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dubai",hour:"2-digit",minute:"2-digit"}).format(new Date())
-      + " GST" + (anyLive ? " · playing" : "");
+      + " GST · " + src + (anyLive ? " · playing now" : "");
   }catch(e){
     document.getElementById("matchHost").innerHTML =
       `<div class="err"><b>Couldn't load live data.</b><br>${escapeHtml(e.message)}<br><br>
@@ -476,7 +561,7 @@ async function load(forceActive){
 let firstLoad = true, anyLive = false, timer = null;
 function scheduleNext(){
   clearTimeout(timer);
-  timer = setTimeout(async ()=>{ await load(false); scheduleNext(); }, anyLive ? 60000 : 300000);
+  timer = setTimeout(async ()=>{ await load(false); scheduleNext(); }, anyLive ? 30000 : 300000);
 }
 load(true).then(scheduleNext);
 </script>
