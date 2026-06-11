@@ -104,6 +104,10 @@
   .status{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
   .status.ft{color:var(--muted)}
   .status.up{color:var(--accent2)}
+  .status.live{color:#ff4d4d}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff4d4d;margin-right:5px;vertical-align:1px;animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+  .match.islive{border-color:rgba(255,77,77,.55);box-shadow:0 0 0 1px rgba(255,77,77,.25),var(--shadow)}
 
   /* rankings */
   .groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-top:22px}
@@ -260,6 +264,17 @@ function stageOf(match){
 }
 function hasScore(m){ return m.score && Array.isArray(m.score.ft) && m.score.ft.length===2; }
 
+/* a match is treated as in-play for this many minutes after kickoff (covers 90'+HT+stoppage) */
+const LIVE_MIN = 150;
+function statusOf(m, dt){
+  if(hasScore(m)) return {cls:'ft', html:'Full&nbsp;time', live:false};
+  if(!dt)        return {cls:'up', html:'Upcoming', live:false};
+  const now = Date.now(), ko = dt.getTime();
+  if(now < ko)                       return {cls:'up',   html:'Upcoming', live:false};
+  if(now < ko + LIVE_MIN*60000)      return {cls:'live', html:'<span class="dot"></span>LIVE', live:true};
+  return {cls:'ft', html:'Played', live:false};
+}
+
 /* ---------- state ---------- */
 let MATCHES = [];
 let ROUNDS = [];      // ordered list of round objects {id,label,order,matches,minDate}
@@ -338,12 +353,13 @@ function renderMatches(){
     grp.items.forEach(m=>{
       const dt = parseToUAE(m.date,m.time);
       const played = hasScore(m);
+      const st = statusOf(m, dt);
       const s1 = played ? m.score.ft[0] : null;
       const s2 = played ? m.score.ft[1] : null;
       const grpLabel = m.group ? m.group : round.label;
-      html += `<div class="match">
+      html += `<div class="match ${st.live?'islive':''}">
         <div class="meta"><span class="grp">${escapeHtml(grpLabel)}</span>
-          <span class="status ${played?'ft':'up'}">${played?'Full&nbsp;time':'Upcoming'}</span></div>
+          <span class="status ${st.cls}">${st.html}</span></div>
         <div class="teams">
           ${teamRow(m.team1, s1, s2, played)}
           ${teamRow(m.team2, s2, s1, played)}
@@ -436,10 +452,19 @@ async function load(forceActive){
       activeIdx = pickActive();
     }
     firstLoad = false;
+    // detect if any match is currently in its live window -> poll faster
+    const now = Date.now();
+    anyLive = MATCHES.some(m=>{
+      if(hasScore(m)) return false;
+      const dt = parseToUAE(m.date,m.time); if(!dt) return false;
+      const ko = dt.getTime();
+      return now >= ko && now < ko + LIVE_MIN*60000;
+    });
     renderMatches();
     renderRanks();
     document.getElementById("refreshMeta").textContent =
-      "Updated " + new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dubai",hour:"2-digit",minute:"2-digit"}).format(new Date()) + " GST";
+      "Updated " + new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dubai",hour:"2-digit",minute:"2-digit"}).format(new Date())
+      + " GST" + (anyLive ? " · live" : "");
   }catch(e){
     document.getElementById("matchHost").innerHTML =
       `<div class="err"><b>Couldn't load live data.</b><br>${escapeHtml(e.message)}<br><br>
@@ -448,9 +473,12 @@ async function load(forceActive){
       <code style="font-size:11px">${DATA_URL}</code></div>`;
   }
 }
-let firstLoad = true;
-load(true);
-setInterval(load, 5*60*1000); // refresh every 5 min
+let firstLoad = true, anyLive = false, timer = null;
+function scheduleNext(){
+  clearTimeout(timer);
+  timer = setTimeout(async ()=>{ await load(false); scheduleNext(); }, anyLive ? 60000 : 300000);
+}
+load(true).then(scheduleNext);
 </script>
 </body>
 </html>
