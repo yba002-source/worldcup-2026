@@ -97,6 +97,10 @@
   .row .tbd{color:var(--muted);font-style:italic;font-weight:600}
   .row .sc{font-family:"Anton",sans-serif;font-size:20px;min-width:26px;text-align:center}
   .row .win{color:var(--accent)}
+  .cards{display:inline-flex;gap:7px;align-items:center;font-size:12px;font-weight:800;flex:none}
+  .cards .yc,.cards .rc{display:inline-flex;align-items:center;gap:3px;color:var(--muted)}
+  .cards .yc::before{content:"";width:9px;height:12px;border-radius:2px;background:#ffd400}
+  .cards .rc::before{content:"";width:9px;height:12px;border-radius:2px;background:#ff4d4d}
   .match .foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
   .match .city{display:inline-flex;align-items:center;gap:6px}
   .uae-time{font-weight:800;color:var(--txt);font-size:13.5px}
@@ -278,7 +282,7 @@ function statusOf(m, dt){
 
 /* ---------- ESPN live overlay (free, no key, CORS-open) ---------- */
 const ESPN_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260719&limit=1000";
-let LIVE = null; // { isoPairKey: {ts,homeISO,awayISO,hs,as,state,completed,detail} }
+let LIVE = null; // { isoPairKey: {ts,homeISO,awayISO,hs,as,state,completed,detail,hy,hr,ay,ar} }
 
 function isoPairKey(a,b){ const x=iso(a), y=iso(b); if(!x||!y) return null; return [x,y].sort().join("-"); }
 
@@ -297,6 +301,18 @@ async function fetchESPN(){
       const an = away.team && (away.team.displayName||away.team.shortDisplayName||away.team.name);
       const key = isoPairKey(hn,an); if(!key) return;
       const st = (ev.status&&ev.status.type)||{};
+      // tally yellow/red cards per side from play-by-play details
+      const sideById = {};
+      comps.forEach(x=>{ if(x.team&&x.team.id) sideById[x.team.id]=x.homeAway; });
+      let hy=0,hr=0,ay=0,ar=0;
+      (c.details||[]).forEach(dt=>{
+        const t = ((dt.type&&(dt.type.text||dt.type.name))||"").toLowerCase();
+        const side = dt.team&&dt.team.id ? sideById[dt.team.id] : null;
+        if(!side) return;
+        if(t.includes("yellow-red")||t.includes("second yellow")){ side==="home"?hr++:ar++; }
+        else if(t.includes("red card")){ side==="home"?hr++:ar++; }
+        else if(t.includes("yellow card")){ side==="home"?hy++:ay++; }
+      });
       idx[key] = {
         ts: Date.parse(ev.date),
         homeISO: iso(hn), awayISO: iso(an),
@@ -304,7 +320,8 @@ async function fetchESPN(){
         as: away.score!=null && away.score!=="" ? +away.score : null,
         state: st.state || "pre",            // pre | in | post
         completed: !!st.completed,
-        detail: (st.shortDetail||st.detail||"").trim()
+        detail: (st.shortDetail||st.detail||"").trim(),
+        hy, hr, ay, ar
       };
     });
     return idx;
@@ -319,9 +336,12 @@ function espnFor(m){
   const mt = parseToUAE(m.date, m.time);
   if(mt && e.ts && Math.abs(mt.getTime()-e.ts) > 36*3600000) return null; // not the same fixture
   const i1 = iso(m.team1);
-  const s1 = (e.homeISO===i1) ? e.hs : e.as;
-  const s2 = (e.homeISO===i1) ? e.as : e.hs;
-  return {s1, s2, state:e.state, completed:e.completed, detail:e.detail};
+  const home1 = (e.homeISO===i1);
+  const s1 = home1 ? e.hs : e.as;
+  const s2 = home1 ? e.as : e.hs;
+  const c1 = {y: home1?e.hy:e.ay, r: home1?e.hr:e.ar};
+  const c2 = {y: home1?e.ay:e.hy, r: home1?e.ar:e.hr};
+  return {s1, s2, state:e.state, completed:e.completed, detail:e.detail, c1, c2};
 }
 
 /* unified "is this match finished" (ESPN first, then openfootball) */
@@ -380,13 +400,17 @@ function pickActive(){
 }
 
 /* ---------- render matches ---------- */
-function teamRow(name, score, otherScore, played){
+function teamRow(name, score, otherScore, played, cards){
   const arab = isArab(name);
   const real = isRealTeam(name);
   const win = played && score!=null && otherScore!=null && score>otherScore;
+  const cardsHtml = (cards && (cards.y||cards.r))
+    ? `<span class="cards">${cards.y?`<span class="yc">${cards.y}</span>`:''}${cards.r?`<span class="rc">${cards.r}</span>`:''}</span>`
+    : '';
   return `<div class="row ${arab?'arab':''}">
     <span class="flag">${real?flag(name):'⚽'}</span>
     <span class="nm ${real?'':'tbd'}">${real?escapeHtml(name):escapeHtml(name||'TBD')}</span>
+    ${cardsHtml}
     <span class="sc ${win?'win':''}">${played&&score!=null?score:''}</span>
   </div>`;
 }
@@ -435,12 +459,13 @@ function renderMatches(){
         s2 = played ? m.score.ft[1] : null;
       }
       const grpLabel = m.group ? m.group : round.label;
+      const c1 = e ? e.c1 : null, c2 = e ? e.c2 : null;
       html += `<div class="match ${st.live?'islive':''}">
         <div class="meta"><span class="grp">${escapeHtml(grpLabel)}</span>
           <span class="status ${st.cls}">${st.html}</span></div>
         <div class="teams">
-          ${teamRow(m.team1, s1, s2, played)}
-          ${teamRow(m.team2, s2, s1, played)}
+          ${teamRow(m.team1, s1, s2, played, c1)}
+          ${teamRow(m.team2, s2, s1, played, c2)}
         </div>
         <div class="foot">
           <span class="city">📍 ${escapeHtml(cityOf(m.ground))}</span>
