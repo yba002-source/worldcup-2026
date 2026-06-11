@@ -190,6 +190,7 @@
     Round of 32 → 16 → Quarter-finals → Semi-finals → Final.
   </p>
   <footer style="margin-top:34px;padding-top:18px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:13px;letter-spacing:.3px">
+    <div id="visitorCount" style="margin-bottom:9px;font-weight:800;color:var(--txt);letter-spacing:.4px"></div>
     Copyright &copy; Yahya EL Alaoui, in collaboration with Claude AI
   </footer>
 </div>
@@ -589,6 +590,20 @@ function scheduleNext(){
   timer = setTimeout(async ()=>{ await load(false); scheduleNext(); }, anyLive ? 30000 : 300000);
 }
 load(true).then(scheduleNext);
+
+/* ---------- visitor counter (Abacus: free, no key, CORS) ---------- */
+(async function(){
+  const el = document.getElementById("visitorCount"); if(!el) return;
+  const BASE = "https://abacus.jasoncameron.dev";
+  const NS = "worldcup2026-yba002-source", KEY = "visits";
+  try{
+    let seen = null; try{ seen = localStorage.getItem("wc26_counted"); }catch(_){}
+    const r = await fetch(`${BASE}/${seen?'get':'hit'}/${NS}/${KEY}`, {cache:"no-store"});
+    const d = await r.json();
+    if(!seen) try{ localStorage.setItem("wc26_counted","1"); }catch(_){}
+    if(d && d.value!=null) el.textContent = "👁 " + Number(d.value).toLocaleString() + " visitors";
+  }catch(e){ /* hide silently if counter service is unreachable */ }
+})();
 </script>
 </body>
 </html>
