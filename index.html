@@ -92,6 +92,9 @@
   }
   .row.arab{background:var(--arab-bg);border-color:var(--arab-line)}
   .row .flag{font-size:22px;line-height:1;width:26px;text-align:center;flex:none}
+  .flagimg{display:inline-block;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
+  .row .flag .flagimg{width:25px;height:17px;object-fit:cover;vertical-align:middle}
+  .noflag{font-size:20px}
   .row .nm{font-weight:700;font-size:15.5px;flex:1}
   .row.arab .nm{color:var(--arab)}
   .row .tbd{color:var(--muted);font-style:italic;font-weight:600}
@@ -126,6 +129,7 @@
   tr.arab td.team{color:var(--arab)}
   tr.qual{background:rgba(25,195,125,.07)}
   td .miniflag{margin-right:6px}
+  td .miniflag .flagimg{width:19px;height:13px;object-fit:cover;vertical-align:-2px}
   td.pts{font-weight:800;color:var(--txt)}
 
   .note{color:var(--muted);font-size:12px;margin-top:18px;line-height:1.6}
@@ -218,14 +222,13 @@ const ISO = {
   "Bosnia and Herzegovina":"BA","Bosnia & Herzegovina":"BA","Bosnia-Herzegovina":"BA","Bosnia Herzegovina":"BA"
 };
 const ARAB = new Set(["DZ","BH","KM","DJ","EG","IQ","JO","KW","LB","LY","MR","MA","OM","PS","QA","SA","SO","SD","SY","TN","AE","YE"]);
-const SPECIAL = { "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Wales":"🏴󠁧󠁢󠁷󠁬󠁳󠁿" };
+const SPECIAL = { "England":"gb-eng","Scotland":"gb-sct","Wales":"gb-wls" };
 
 function iso(name){ return ISO[(name||"").trim()] || null; }
 function flag(name){
-  if(SPECIAL[name]) return SPECIAL[name];
-  const c = iso(name);
-  if(!c) return "🏳️";
-  return String.fromCodePoint(...[...c].map(ch=>0x1F1E6 + ch.charCodeAt(0)-65));
+  const code = SPECIAL[name] ? SPECIAL[name] : (iso(name) ? iso(name).toLowerCase() : null);
+  if(!code) return '<span class="noflag">🏳️</span>';
+  return `<img class="flagimg" src="https://flagcdn.com/${code}.svg" alt="" loading="lazy">`;
 }
 function isArab(name){ const c=iso(name); return c && ARAB.has(c); }
 function isRealTeam(name){
