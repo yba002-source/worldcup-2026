@@ -214,7 +214,8 @@ const ISO = {
   "Greece":"GR","Iran":"IR","IR Iran":"IR","South Africa":"ZA","Costa Rica":"CR","Panama":"PA","Jamaica":"JM",
   "Honduras":"HN","New Zealand":"NZ","Uzbekistan":"UZ","Paraguay":"PY","Peru":"PE","Chile":"CL",
   "Venezuela":"VE","Bolivia":"BO","Russia":"RU","Cape Verde":"CV","Cabo Verde":"CV","Curacao":"CW",
-  "Curaçao":"CW","Haiti":"HT"
+  "Curaçao":"CW","Haiti":"HT",
+  "Bosnia and Herzegovina":"BA","Bosnia & Herzegovina":"BA","Bosnia-Herzegovina":"BA","Bosnia Herzegovina":"BA"
 };
 const ARAB = new Set(["DZ","BH","KM","DJ","EG","IQ","JO","KW","LB","LY","MR","MA","OM","PS","QA","SA","SO","SD","SY","TN","AE","YE"]);
 const SPECIAL = { "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Wales":"🏴󠁧󠁢󠁷󠁬󠁳󠁿" };
@@ -232,7 +233,7 @@ function isRealTeam(name){
   if(SPECIAL[name]) return true;
   if(iso(name)) return true;
   // placeholders look like "W101","1A","2B","3rd Group...","Winner ..."
-  return /^[A-Za-z .'’\-]{4,}$/.test(name) && !/^winner|^runner|^loser|group|place|^[0-9]/i.test(name);
+  return /^[A-Za-z .'’&\-]{4,}$/.test(name) && !/^winner|^runner|^loser|group|place|^[0-9]/i.test(name);
 }
 
 /* ---------- time: venue local -> UAE ---------- */
