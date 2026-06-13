@@ -188,7 +188,7 @@
     <div class="groups" id="groupHost"></div>
   </section>
 
-  <p class="note">
+  <p class="note" style="text-align:center">
     The Matches page shows the current round and advances automatically — group stage first, then
     Round of 32 → 16 → Quarter-finals → Semi-finals → Final.
   </p>
@@ -598,14 +598,17 @@ load(true).then(scheduleNext);
 /* ---------- visitor counter (Abacus: free, no key, CORS) ---------- */
 (async function(){
   const el = document.getElementById("visitorCount"); if(!el) return;
-  const BASE = "https://abacus.jasoncameron.dev";
-  const NS = "worldcup2026-yba002-source", KEY = "visits";
+  const ABACUS = "https://abacus.jasoncameron.dev";
+  const NS = "worldcup2026-yba002-source", KEY = "visits2", BASE = 27034, FLAG = "wc26_counted_v2";
   try{
-    let seen = null; try{ seen = localStorage.getItem("wc26_counted"); }catch(_){}
-    const r = await fetch(`${BASE}/${seen?'get':'hit'}/${NS}/${KEY}`, {cache:"no-store"});
-    const d = await r.json();
-    if(!seen) try{ localStorage.setItem("wc26_counted","1"); }catch(_){}
-    if(d && d.value!=null) el.textContent = "👁 " + Number(d.value).toLocaleString() + " visitors";
+    let seen = null; try{ seen = localStorage.getItem(FLAG); }catch(_){}
+    let value = 0;
+    try{
+      const r = await fetch(`${ABACUS}/${seen?'get':'hit'}/${NS}/${KEY}`, {cache:"no-store"});
+      if(r.ok){ const d = await r.json(); if(d && d.value!=null) value = Number(d.value); }
+    }catch(_){}
+    if(!seen) try{ localStorage.setItem(FLAG,"1"); }catch(_){}
+    el.textContent = "👁 " + (BASE + value).toLocaleString() + " visitors";
   }catch(e){ /* hide silently if counter service is unreachable */ }
 })();
 </script>
